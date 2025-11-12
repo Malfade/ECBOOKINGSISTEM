@@ -14,6 +14,13 @@ from ..utils.datetime import as_utc_iso
 
 bp = Blueprint("reservations", __name__, url_prefix="/reservations")
 
+def _current_user_id() -> int | None:
+    identity = get_jwt_identity()
+    try:
+        return int(identity) if identity is not None else None
+    except (TypeError, ValueError):
+        return None
+
 
 def _parse_datetime(value: str | None) -> datetime:
     if not value:
@@ -28,10 +35,12 @@ def _parse_datetime(value: str | None) -> datetime:
 
 
 @bp.get("/mine")
-@limiter.limit("60 per minute", key_func=authenticated_rate_limit_key)
+@limiter.limit("600 per minute", key_func=authenticated_rate_limit_key)
 def my_reservations():
     verify_jwt_in_request()
-    user_id = get_jwt_identity()
+    user_id = _current_user_id()
+    if user_id is None:
+        return jsonify({"msg": "invalid user identity"}), HTTPStatus.UNAUTHORIZED
     data = [
         {
             "id": reservation.id,
@@ -48,7 +57,7 @@ def my_reservations():
 
 @bp.patch("/<int:reservation_id>")
 @role_required({UserRole.teacher, UserRole.admin})
-@limiter.limit("30 per minute", key_func=authenticated_rate_limit_key)
+@limiter.limit("120 per minute", key_func=authenticated_rate_limit_key)
 def update_reservation(reservation_id: int):
     reservation = reservations.get_reservation(reservation_id)
     if not reservation:
@@ -69,8 +78,9 @@ def update_reservation(reservation_id: int):
         return jsonify({"msg": str(exc)}), HTTPStatus.BAD_REQUEST
 
     # TODO: добавить уведомление пользователям за 10 минут до брони
+    actor_id = _current_user_id()
     audit.record_action(
-        user_id=get_jwt_identity(),
+        user_id=actor_id,
         action=AuditAction.update_reservation,
         description="Reservation updated",
         payload={"reservation_id": updated.id, "room_id": updated.room_id},
@@ -87,14 +97,16 @@ def update_reservation(reservation_id: int):
 
 
 @bp.delete("/<int:reservation_id>")
-@limiter.limit("30 per minute", key_func=authenticated_rate_limit_key)
+@limiter.limit("180 per minute", key_func=authenticated_rate_limit_key)
 def cancel_reservation(reservation_id: int):
     verify_jwt_in_request()
     reservation = reservations.get_reservation(reservation_id)
     if not reservation:
         return jsonify({"msg": "reservation not found"}), HTTPStatus.NOT_FOUND
 
-    identity = get_jwt_identity()
+    identity = _current_user_id()
+    if identity is None:
+        return jsonify({"msg": "invalid user identity"}), HTTPStatus.UNAUTHORIZED
     claims = get_jwt()
     role = claims.get("role")
 
@@ -115,7 +127,7 @@ def cancel_reservation(reservation_id: int):
 
 @bp.get("/room/<int:room_id>/history")
 @role_required({UserRole.teacher, UserRole.admin})
-@limiter.limit("30 per minute", key_func=authenticated_rate_limit_key)
+@limiter.limit("180 per minute", key_func=authenticated_rate_limit_key)
 def room_history(room_id: int):
     room = rooms.get_room(room_id)
     if not room:

@@ -6,11 +6,17 @@ from typing import Iterable, List, Optional, Sequence
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
+from sqlalchemy.exc import IntegrityError
+
 from ..extensions import db
 from ..models import Reservation, ReservationStatus, Room, User
 from ..utils.pagination import Page, paginate_select
 
 RESERVATION_LOOKAHEAD_HOURS = 24
+
+
+class ReservationConflictError(ValueError):
+    """Raised when a requested reservation overlaps an existing booking."""
 
 
 def room_schedule(room: Room) -> List[Reservation]:
@@ -49,7 +55,7 @@ def current_active_reservation(room_id: int, *, at: datetime | None = None) -> R
             Reservation.end_time > ref,
         )
         .order_by(Reservation.start_time.asc())
-    ).scalar_one_or_none()
+    ).scalars().first()
 
 
 def next_reservation(room_id: int, *, after: datetime | None = None) -> Reservation | None:
@@ -63,7 +69,7 @@ def next_reservation(room_id: int, *, after: datetime | None = None) -> Reservat
             Reservation.start_time > ref,
         )
         .order_by(Reservation.start_time.asc())
-    ).scalar_one_or_none()
+    ).scalars().first()
 
 
 def reservations_for_user(user_id: int) -> Sequence[Reservation]:
@@ -102,7 +108,9 @@ def _ensure_within_room_hours(room: Room, start: datetime, end: datetime) -> Non
 
 
 def _check_conflicts(*, room_id: int, start: datetime, end: datetime, exclude_id: int | None = None) -> None:
-    query = db.select(Reservation).filter(
+    query = (
+        select(Reservation)
+        .filter(
         Reservation.room_id == room_id,
         Reservation.status == ReservationStatus.active,
         or_(
@@ -110,29 +118,40 @@ def _check_conflicts(*, room_id: int, start: datetime, end: datetime, exclude_id
             and_(Reservation.start_time < end, Reservation.end_time >= end),
             and_(Reservation.start_time >= start, Reservation.end_time <= end),
         ),
+        )
+        .order_by(Reservation.start_time.asc())
+        .with_for_update(of=Reservation)
     )
     if exclude_id is not None:
         query = query.filter(Reservation.id != exclude_id)
 
     conflict_exists = db.session.execute(query).first()
     if conflict_exists:
-        raise ValueError("Reservation conflicts with existing booking")
+        raise ReservationConflictError("Reservation conflicts with existing booking")
 
 
 def create_reservation(*, room: Room, user_id: int, start: datetime, end: datetime) -> Reservation:
     _validate_time_range(start, end)
-    _check_conflicts(room_id=room.id, start=start, end=end)
-
-    reservation = Reservation(
-        room_id=room.id,
-        user_id=user_id,
-        start_time=start,
-        end_time=end,
-        status=ReservationStatus.active,
-    )
-    db.session.add(reservation)
-    db.session.commit()
-    return reservation
+    try:
+        with db.session.begin_nested():
+            _check_conflicts(room_id=room.id, start=start, end=end)
+            reservation = Reservation(
+                room_id=room.id,
+                user_id=user_id,
+                start_time=start,
+                end_time=end,
+                status=ReservationStatus.active,
+            )
+            db.session.add(reservation)
+        db.session.commit()
+        db.session.refresh(reservation)
+        return reservation
+    except ReservationConflictError:
+        db.session.rollback()
+        raise
+    except IntegrityError as exc:
+        db.session.rollback()
+        raise ReservationConflictError("Reservation conflicts with existing booking") from exc
 
 
 def search_reservations(

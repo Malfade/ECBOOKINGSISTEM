@@ -10,9 +10,17 @@ from ..extensions import limiter
 from ..models import AuditAction, RoomType
 from ..security import authenticated_rate_limit_key
 from ..services import audit, reservations, rooms
+from ..services.reservations import ReservationConflictError
 from ..utils.datetime import as_utc_iso
 
 bp = Blueprint("rooms", __name__, url_prefix="/rooms")
+
+def _current_user_id() -> int | None:
+    identity = get_jwt_identity()
+    try:
+        return int(identity) if identity is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _serialize_room(room, *, now: datetime):
@@ -66,7 +74,7 @@ def _parse_datetime(value: str | None) -> datetime:
 
 
 @bp.get("")
-@limiter.limit("180 per minute")
+@limiter.limit("1200 per minute")
 def list_rooms():
     # Контроллер только получает запрос,
     # вся логика должна быть вынесена в services/reservations.py
@@ -76,7 +84,7 @@ def list_rooms():
 
 
 @bp.get("/<int:room_id>")
-@limiter.limit("120 per minute")
+@limiter.limit("600 per minute")
 def room_detail(room_id: int):
     # TODO: добавить защиту от попыток спама (rate-limiting)
     room = rooms.get_room(room_id)
@@ -115,10 +123,12 @@ def room_detail(room_id: int):
 
 
 @bp.post("/<int:room_id>/reserve")
-@limiter.limit("10 per minute", key_func=authenticated_rate_limit_key)
+@limiter.limit("180 per minute", key_func=authenticated_rate_limit_key)
 def reserve_room(room_id: int):
     verify_jwt_in_request()
-    user_id = get_jwt_identity()
+    user_id = _current_user_id()
+    if user_id is None:
+        return jsonify({"msg": "invalid user identity"}), HTTPStatus.UNAUTHORIZED
     payload = request.get_json(silent=True) or {}
 
     try:
@@ -144,6 +154,8 @@ def reserve_room(room_id: int):
             start=start,
             end=end,
         )
+    except ReservationConflictError as exc:
+        return jsonify({"msg": str(exc)}), HTTPStatus.CONFLICT
     except ValueError as exc:
         return jsonify({"msg": str(exc)}), HTTPStatus.BAD_REQUEST
 

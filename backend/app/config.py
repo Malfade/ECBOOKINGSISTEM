@@ -42,7 +42,7 @@ class Config:
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
     RATELIMIT_DEFAULTS = [
         limit.strip()
-        for limit in os.getenv("RATELIMIT_DEFAULTS", "200 per hour;2000 per day").split(";")
+        for limit in os.getenv("RATELIMIT_DEFAULTS", "6000 per hour;100000 per day").split(";")
         if limit.strip()
     ]
     RATELIMIT_HEADERS_ENABLED = True
