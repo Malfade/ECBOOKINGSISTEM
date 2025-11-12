@@ -20,6 +20,10 @@ export interface Room {
   status: RoomStatus;
   current_reservation: ReservationSummary | null;
   next_reservation: ReservationSummary | null;
+  booking_window?: {
+    start: string | null;
+    end: string | null;
+  };
 }
 
 export interface RoomScheduleEntry {

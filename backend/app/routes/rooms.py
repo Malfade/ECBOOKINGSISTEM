@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, time
 from http import HTTPStatus
 
 from flask import Blueprint, jsonify, request
@@ -58,7 +58,17 @@ def _serialize_room(room, *, now: datetime):
             if upcoming
             else None
         ),
+        "booking_window": {
+            "start": _format_time(room.booking_start),
+            "end": _format_time(room.booking_end),
+        },
     }
+
+
+def _format_time(value: time | None) -> str | None:
+    if value is None:
+        return None
+    return value.strftime("%H:%M")
 
 
 def _parse_datetime(value: str | None) -> datetime:
