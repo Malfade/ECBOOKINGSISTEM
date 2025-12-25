@@ -13,9 +13,15 @@ export default function Home() {
       <div className="flex gap-4">
         <Link
           href="/admin"
-          className="bg-zinc-100 text-zinc-900 px-6 py-3 rounded-full font-medium hover:bg-zinc-200 transition-colors"
+          className="bg-zinc-800 text-zinc-300 border border-zinc-700 px-6 py-3 rounded-full font-medium hover:bg-zinc-700 transition-colors"
         >
-          Go to Admin Panel
+          Admin Panel
+        </Link>
+        <Link
+          href="/rooms"
+          className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+        >
+          Book a Room
         </Link>
       </div>
 
