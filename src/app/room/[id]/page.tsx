@@ -123,11 +123,11 @@ export default function RoomPage() {
             setUserName('');
             fetchBookings();
 
-            // Auto close after 2s
-            setTimeout(() => {
-                setSelectedSlot(null);
-                setSuccess(false);
-            }, 3000);
+            setSuccess(true);
+            setUserName('');
+            fetchBookings();
+
+            // Success state remains until user closes
 
         } catch (e) {
             alert('Error creating booking');
@@ -249,12 +249,24 @@ export default function RoomPage() {
                                 </button>
                             </form>
                         ) : (
-                            <div className="text-center py-8">
-                                <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-                                    <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                            <div className="text-center py-6">
+                                <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-300">
+                                    <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
                                 </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">Booked!</h3>
-                                <p className="text-neutral-400">See you at {selectedSlot}.</p>
+                                <h3 className="text-3xl font-bold text-white mb-2">Booked!</h3>
+                                <div className="bg-neutral-800 rounded-xl p-4 my-6 text-left">
+                                    <p className="text-neutral-400 text-xs uppercase tracking-wider mb-1">Guest</p>
+                                    <p className="text-white font-medium mb-3 text-lg">{userName}</p>
+
+                                    <p className="text-neutral-400 text-xs uppercase tracking-wider mb-1">Time</p>
+                                    <p className="text-white font-medium text-lg">{selectedSlot} <span className="text-neutral-500 text-sm">/ {date}</span></p>
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedSlot(null); setSuccess(false); }}
+                                    className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3 rounded-xl transition-colors"
+                                >
+                                    Done
+                                </button>
                             </div>
                         )}
                     </div>

@@ -184,6 +184,18 @@ export default function AdminPage() {
         return `/room/${id}`;
     };
 
+    const formatTime = (isoString: string) => {
+        if (!isoString) return '';
+        // Extract HH:mm from 1970-01-01THH:mm:ss.000Z
+        // If string is 2023-.... it will also take HH:mm if after T
+        // Robust way: create Date object
+        const date = new Date(isoString);
+        // We stored as UTC.
+        const h = date.getUTCHours().toString().padStart(2, '0');
+        const m = date.getUTCMinutes().toString().padStart(2, '0');
+        return `${h}:${m}`;
+    };
+
     return (
         <div className="min-h-screen bg-neutral-950 text-neutral-100 p-8 font-sans">
             <div className="max-w-6xl mx-auto">
@@ -374,7 +386,9 @@ export default function AdminPage() {
                                         {currentRoomBookings.map(b => (
                                             <div key={b.id} className="bg-neutral-800 p-3 rounded-lg flex justify-between items-center">
                                                 <div>
-                                                    <p className="font-bold text-white">{b.timeStart} - {b.timeEnd}</p>
+                                                    <p className="font-bold text-white">
+                                                        {formatTime(b.timeStart)} - {formatTime(b.timeEnd)}
+                                                    </p>
                                                     <p className="text-sm text-neutral-400">{b.userName}</p>
                                                 </div>
                                                 <div className="text-xs text-neutral-500">
