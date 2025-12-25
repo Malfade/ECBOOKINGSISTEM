@@ -69,10 +69,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Invalid time format' }, { status: 400 });
         }
 
-        // 1. Check duration = 1 hour
+        // 1. Check duration = 1, 2, or 3 hours
         const durationMs = endEpoch.getTime() - startEpoch.getTime();
-        if (durationMs !== 60 * 60 * 1000) {
-            return NextResponse.json({ error: 'Booking duration must be exactly 1 hour' }, { status: 400 });
+        const durationHours = durationMs / (60 * 60 * 1000);
+
+        if (durationHours < 1 || durationHours > 3 || durationHours % 1 !== 0) {
+            return NextResponse.json({ error: 'Booking duration must be 1, 2, or 3 hours' }, { status: 400 });
         }
 
         // 2. Check if in past

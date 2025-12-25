@@ -25,13 +25,14 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
     const params = await props.params;
     try {
         const body = await request.json();
-        const { name, location } = body;
+        const { name, location, description } = body;
 
         const updatedRoom = await prisma.room.update({
             where: { id: params.id },
             data: {
                 name,
-                location
+                location,
+                description
             }
         });
 

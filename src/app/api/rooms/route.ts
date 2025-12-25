@@ -16,6 +16,7 @@ export async function POST(request: Request) {
             data: {
                 name,
                 location,
+                description: body.description || null,
             },
         });
 

@@ -8,6 +8,7 @@ interface Room {
     id: string;
     name: string;
     location: string | null;
+    description: string | null;
     createdAt: string;
 }
 
@@ -32,6 +33,7 @@ export default function AdminPage() {
 
     const [name, setName] = useState('');
     const [location, setLocation] = useState('');
+    const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -39,6 +41,7 @@ export default function AdminPage() {
     const [editingRoom, setEditingRoom] = useState<Room | null>(null);
     const [editName, setEditName] = useState('');
     const [editLocation, setEditLocation] = useState('');
+    const [editDescription, setEditDescription] = useState('');
     const [editModalOpen, setEditModalOpen] = useState(false);
 
     // QR Modal
@@ -114,7 +117,7 @@ export default function AdminPage() {
             const res = await fetch('/api/rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, location }),
+                body: JSON.stringify({ name, location, description }),
             });
 
             if (!res.ok) {
@@ -124,10 +127,25 @@ export default function AdminPage() {
             await fetchRooms();
             setName('');
             setLocation('');
+            setDescription('');
         } catch (err) {
             setError('Error creating room');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const deleteBooking = async (id: string, roomId: string) => {
+        if (!confirm("Delete this booking?")) return;
+        try {
+            const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                // refresh
+                const date = (document.querySelector('input[type="date"]') as HTMLInputElement)?.value;
+                if (date) fetchBookingsByDate(roomId, date);
+            }
+        } catch (e) {
+            alert('Error deleting booking');
         }
     };
 
@@ -148,6 +166,7 @@ export default function AdminPage() {
         setEditingRoom(room);
         setEditName(room.name);
         setEditLocation(room.location || '');
+        setEditDescription(room.description || '');
         setEditModalOpen(true);
     };
 
@@ -159,7 +178,7 @@ export default function AdminPage() {
             const res = await fetch(`/api/rooms/${editingRoom.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: editName, location: editLocation })
+                body: JSON.stringify({ name: editName, location: editLocation, description: editDescription })
             });
 
             if (!res.ok) throw new Error("Failed to update");
@@ -229,6 +248,12 @@ export default function AdminPage() {
                                     onChange={(e) => setLocation(e.target.value)}
                                     className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-full text-white placeholder-neutral-500"
                                 />
+                                <textarea
+                                    placeholder="Description (optional)"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-full text-white placeholder-neutral-500 h-20 resize-none"
+                                />
                                 <button
                                     type="submit"
                                     disabled={loading}
@@ -264,7 +289,8 @@ export default function AdminPage() {
                                                 </svg>
                                             </button>
                                         </div>
-                                        <p className="text-neutral-400 text-sm">{room.location || 'No location'}</p>
+                                        <p className="text-neutral-400 text-sm mb-1">{room.location || 'No location'}</p>
+                                        {room.description && <p className="text-neutral-500 text-xs line-clamp-2 mb-4">{room.description}</p>}
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
@@ -324,6 +350,14 @@ export default function AdminPage() {
                                         value={editLocation}
                                         onChange={e => setEditLocation(e.target.value)}
                                         className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-white"
+                                    />
+                                </div>
+                                <div className="mb-6">
+                                    <label className="block text-sm text-neutral-400 mb-2">Description</label>
+                                    <textarea
+                                        value={editDescription}
+                                        onChange={e => setEditDescription(e.target.value)}
+                                        className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-white h-24 resize-none"
                                     />
                                 </div>
                                 <div className="flex gap-3 justify-end">
@@ -391,8 +425,16 @@ export default function AdminPage() {
                                                     </p>
                                                     <p className="text-sm text-neutral-400">{b.userName}</p>
                                                 </div>
-                                                <div className="text-xs text-neutral-500">
-                                                    {b.createdAt?.split('T')[0]}
+                                                <div className="flex items-center gap-4">
+                                                    <div className="text-xs text-neutral-500">
+                                                        {b.createdAt?.split('T')[0]}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => deleteBooking(b.id, viewingRoomForBookings.id)}
+                                                        className="text-red-500 hover:text-red-400 text-xs border border-red-500/20 bg-red-500/10 px-2 py-1 rounded"
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -404,6 +446,6 @@ export default function AdminPage() {
                 )}
 
             </div>
-        </div>
+        </div >
     );
 }
