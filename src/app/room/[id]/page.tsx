@@ -88,7 +88,9 @@ export default function RoomPage() {
     };
 
     const getLessonForSlot = (slot: string) => {
-        const dateObj = new Date(date);
+        // Parse date components locally to avoid timezone issues
+        const [year, month, day] = date.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day); // month is 0-indexed
         const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
         return lessons.find(l => {
