@@ -9,7 +9,6 @@ interface Room {
     name: string;
     location: string | null;
     description: string | null;
-    schedule: any;
     createdAt: string;
 }
 
@@ -32,15 +31,6 @@ interface Booking {
     createdAt: string;
 }
 
-const DEFAULT_SCHEDULE = {
-    monday: { start: '09:00', end: '18:00', active: true },
-    tuesday: { start: '09:00', end: '18:00', active: true },
-    wednesday: { start: '09:00', end: '18:00', active: true },
-    thursday: { start: '09:00', end: '18:00', active: true },
-    friday: { start: '09:00', end: '18:00', active: true },
-    saturday: { start: '10:00', end: '16:00', active: false },
-    sunday: { start: '10:00', end: '16:00', active: false },
-};
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -51,7 +41,6 @@ export default function AdminPage() {
     const [name, setName] = useState('');
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
-    const [schedule, setSchedule] = useState<any>(JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)));
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -60,7 +49,6 @@ export default function AdminPage() {
     const [editName, setEditName] = useState('');
     const [editLocation, setEditLocation] = useState('');
     const [editDescription, setEditDescription] = useState('');
-    const [editSchedule, setEditSchedule] = useState<any>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
 
     // QR Modal
@@ -154,7 +142,7 @@ export default function AdminPage() {
             const res = await fetch('/api/rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, location, description, schedule }),
+                body: JSON.stringify({ name, location, description }),
             });
 
             if (!res.ok) throw new Error('Failed to create room');
@@ -163,7 +151,7 @@ export default function AdminPage() {
             setName('');
             setLocation('');
             setDescription('');
-            setSchedule(JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)));
+
         } catch (err) {
             setError('Error creating room');
         } finally {
@@ -188,7 +176,6 @@ export default function AdminPage() {
         setEditName(room.name);
         setEditLocation(room.location || '');
         setEditDescription(room.description || '');
-        setEditSchedule(room.schedule || JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)));
         setEditModalOpen(true);
     };
 
@@ -203,8 +190,7 @@ export default function AdminPage() {
                 body: JSON.stringify({
                     name: editName,
                     location: editLocation,
-                    description: editDescription,
-                    schedule: editSchedule
+                    description: editDescription
                 })
             });
 
@@ -338,50 +324,6 @@ export default function AdminPage() {
                                     onChange={(e) => setDescription(e.target.value)}
                                     className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-full text-white placeholder-neutral-500 h-20 resize-none"
                                 />
-                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2 border border-neutral-800 rounded-lg p-2">
-                                    <label className="text-sm text-neutral-400 block mb-2">Schedule</label>
-                                    {DAYS.map(day => (
-                                        <div key={day} className="flex items-center gap-2">
-                                            <div className="w-20 capitalize text-xs text-neutral-300">
-                                                <label className="flex items-center gap-1 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={schedule[day].active}
-                                                        onChange={e => setSchedule({
-                                                            ...schedule,
-                                                            [day]: { ...schedule[day], active: e.target.checked }
-                                                        })}
-                                                        className="rounded border-neutral-700 bg-neutral-800 text-blue-600"
-                                                    />
-                                                    {day.slice(0, 3)}
-                                                </label>
-                                            </div>
-                                            {schedule[day].active && (
-                                                <div className="flex items-center gap-1">
-                                                    <input
-                                                        type="time"
-                                                        value={schedule[day].start}
-                                                        onChange={e => setSchedule({
-                                                            ...schedule,
-                                                            [day]: { ...schedule[day], start: e.target.value }
-                                                        })}
-                                                        className="bg-neutral-800 border border-neutral-700 rounded px-1 py-0.5 text-[10px] text-white w-14"
-                                                    />
-                                                    <span className="text-neutral-500 text-[10px]">-</span>
-                                                    <input
-                                                        type="time"
-                                                        value={schedule[day].end}
-                                                        onChange={e => setSchedule({
-                                                            ...schedule,
-                                                            [day]: { ...schedule[day], end: e.target.value }
-                                                        })}
-                                                        className="bg-neutral-800 border border-neutral-700 rounded px-1 py-0.5 text-[10px] text-white w-14"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
                                 <button
                                     type="submit"
                                     disabled={loading}
@@ -495,54 +437,6 @@ export default function AdminPage() {
                                         onChange={e => setEditDescription(e.target.value)}
                                         className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-white h-24 resize-none"
                                     />
-                                </div>
-                                <div className="mb-6">
-                                    <label className="block text-sm text-neutral-400 mb-2">Schedule</label>
-                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                                        {DAYS.map(day => (
-                                            <div key={day} className="flex items-center gap-2 bg-neutral-950 p-2 rounded border border-neutral-800">
-                                                <div className="w-24 capitalize text-sm text-neutral-300 font-medium">
-                                                    <label className="flex items-center gap-2 cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={editSchedule?.[day]?.active ?? false}
-                                                            onChange={e => setEditSchedule({
-                                                                ...editSchedule,
-                                                                [day]: { ...editSchedule[day], active: e.target.checked }
-                                                            })}
-                                                            className="rounded border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-blue-500"
-                                                        />
-                                                        {day}
-                                                    </label>
-                                                </div>
-                                                {editSchedule?.[day]?.active ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="time"
-                                                            value={editSchedule[day].start}
-                                                            onChange={e => setEditSchedule({
-                                                                ...editSchedule,
-                                                                [day]: { ...editSchedule[day], start: e.target.value }
-                                                            })}
-                                                            className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white"
-                                                        />
-                                                        <span className="text-neutral-500">-</span>
-                                                        <input
-                                                            type="time"
-                                                            value={editSchedule[day].end}
-                                                            onChange={e => setEditSchedule({
-                                                                ...editSchedule,
-                                                                [day]: { ...editSchedule[day], end: e.target.value }
-                                                            })}
-                                                            className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white"
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-neutral-600 italic">Closed</span>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
                                 </div>
                                 <div className="flex gap-3 justify-end">
                                     <button type="button" onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-neutral-400 hover:text-white">Cancel</button>
