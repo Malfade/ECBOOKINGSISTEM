@@ -17,6 +17,7 @@ export async function POST(request: Request) {
                 name,
                 location,
                 description: body.description || null,
+                schedule: body.schedule || null,
             },
         });
 

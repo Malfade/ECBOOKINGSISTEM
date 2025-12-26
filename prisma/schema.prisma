@@ -12,6 +12,7 @@ model Room {
   name      String
   location  String?
   description String?
+  schedule  Json?
   createdAt DateTime  @default(now()) @map("created_at")
   bookings  Booking[]
 

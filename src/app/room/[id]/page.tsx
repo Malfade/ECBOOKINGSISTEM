@@ -14,6 +14,7 @@ interface Room {
     name: string;
     location: string | null;
     description: string | null;
+    schedule: any;
 }
 
 const TIME_SLOTS = [
@@ -81,8 +82,23 @@ export default function RoomPage() {
     // Helper to get slot index
     const getSlotIndex = (slot: string) => TIME_SLOTS.indexOf(slot);
 
+    // Schedule Check
+    const isSlotAvailableInSchedule = (slot: string) => {
+        if (!room || !room.schedule) return true; // Default open if no schedule
+
+        const dateObj = new Date(date);
+        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const daySchedule = room.schedule[dayName];
+
+        if (!daySchedule || !daySchedule.active) return false;
+
+        // Simple string comparison for HH:mm works because format is fixed
+        return slot >= daySchedule.start && slot < daySchedule.end; // < end because slot is start time of 1h block
+    };
+
     const handleSlotClick = (slot: string) => {
         if (isSlotOccupied(slot)) return;
+        if (!isSlotAvailableInSchedule(slot)) return;
 
         // Check past
         const now = new Date();
@@ -246,6 +262,10 @@ export default function RoomPage() {
                             }
 
                             const isSelected = selectedSlots.includes(slot);
+                            const isScheduled = isSlotAvailableInSchedule(slot);
+
+                            // Disable if scheduled closed
+                            if (!isScheduled) disabled = true;
 
                             return (
                                 <button
@@ -255,7 +275,7 @@ export default function RoomPage() {
                                     className={`
                                         relative py-4 px-4 rounded-xl text-lg font-medium transition-all duration-200 border
                                         ${disabled
-                                            ? 'bg-neutral-900/50 border-neutral-900 text-neutral-600 cursor-not-allowed'
+                                            ? 'bg-neutral-900/50 border-neutral-900 text-neutral-600 cursor-not-allowed opacity-50'
                                             : isSelected
                                                 ? 'bg-blue-600 border-blue-500 text-white shadow-lg scale-[1.02]'
                                                 : 'bg-neutral-900 border-neutral-800 text-white hover:bg-neutral-800 hover:border-blue-500/50'
@@ -265,6 +285,7 @@ export default function RoomPage() {
                                     {slot}
                                     {occupied && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500/50"></span>}
                                     {!occupied && !disabled && !isSelected && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500/50"></span>}
+                                    {!isScheduled && !occupied && <span className="absolute top-2 right-2 text-[10px] text-neutral-700">CLOSED</span>}
                                 </button>
                             );
                         })}
