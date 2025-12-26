@@ -24,6 +24,10 @@ interface Lesson {
     timeEnd: string;
     subject: string;
     teacher: string | null;
+    group: {
+        id: string;
+        name: string;
+    };
 }
 
 const TIME_SLOTS = [
@@ -336,7 +340,7 @@ export default function RoomPage() {
                                     {!occupied && !disabled && !isSelected && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500/50"></span>}
                                     {!isScheduled && !occupied && <span className="absolute top-2 right-2 text-[10px] text-neutral-700">CLOSED</span>}
                                     {lesson && <span className="absolute top-2 right-2 text-[10px] text-blue-500 font-bold uppercase tracking-wider">CLASS</span>}
-                                    {lesson && <span className="absolute bottom-2 left-4 text-[10px] text-neutral-400 truncate w-20">{lesson.subject}</span>}
+                                    {lesson && <span className="absolute bottom-2 left-4 text-[10px] text-neutral-400 truncate w-20">{lesson.group.name}</span>}
                                 </button>
                             );
                         })}

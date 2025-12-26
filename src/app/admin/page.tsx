@@ -298,9 +298,17 @@ export default function AdminPage() {
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                         QRBook Admin
                     </h1>
-                    <Link href="/" className="text-neutral-400 hover:text-white transition-colors text-sm">
-                        Home
-                    </Link>
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/admin/groups"
+                            className="bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                        >
+                            📚 Группы
+                        </Link>
+                        <Link href="/" className="text-neutral-400 hover:text-white transition-colors text-sm">
+                            Home
+                        </Link>
+                    </div>
                 </header>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

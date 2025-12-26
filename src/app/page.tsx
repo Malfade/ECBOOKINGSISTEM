@@ -10,12 +10,18 @@ export default function Home() {
         Simple QR-code room booking system.
       </p>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Link
+          href="/groups"
+          className="bg-purple-600 text-white px-8 py-3 rounded-full font-bold hover:bg-purple-500 transition-colors shadow-lg shadow-purple-500/20"
+        >
+          📚 View Schedules
+        </Link>
         <Link
           href="/rooms"
           className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
         >
-          Book a Room
+          📅 Book a Room
         </Link>
       </div>
 
