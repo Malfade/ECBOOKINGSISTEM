@@ -8,14 +8,13 @@ datasource db {
 }
 
 model Room {
-  id        String    @id @default(uuid())
-  name      String
-  location  String?
+  id          String    @id @default(uuid())
+  name        String
+  location    String?
   description String?
-  schedule  Json?
-  createdAt DateTime  @default(now()) @map("created_at")
-  bookings  Booking[]
-  lessons   Lesson[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  bookings    Booking[]
+  lessons     Lesson[]
 
   @@map("rooms")
 }
@@ -34,13 +33,26 @@ model Booking {
   @@map("bookings")
 }
 
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  course      Int?
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  lessons     Lesson[]
+
+  @@map("groups")
+}
+
 model Lesson {
   id        String   @id @default(uuid())
-  roomId    String
+  groupId   String   @map("group_id")
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  roomId    String   @map("room_id")
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   day       String   // "monday", "tuesday", etc.
-  timeStart String   // "09:00" - simplified as string for recurring
-  timeEnd   String   // "10:30"
+  timeStart String   @map("time_start") // "09:00"
+  timeEnd   String   @map("time_end")   // "10:30"
   subject   String
   teacher   String?
   createdAt DateTime @default(now()) @map("created_at")

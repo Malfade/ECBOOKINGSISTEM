@@ -11,12 +11,18 @@ interface Lesson {
     timeEnd: string;
     subject: string;
     teacher: string | null;
+    room: {
+        id: string;
+        name: string;
+        location: string | null;
+    };
 }
 
-interface Room {
+interface Group {
     id: string;
     name: string;
-    location: string | null;
+    course: number | null;
+    description: string | null;
 }
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -44,37 +50,37 @@ const DAY_EMOJI: Record<string, string> = {
 export default function SchedulePage() {
     const params = useParams();
     const router = useRouter();
-    const courseId = params.courseId as string;
+    const groupId = params.courseId as string; // Keep param name for backwards compatibility
 
     const [lessons, setLessons] = useState<Lesson[]>([]);
-    const [room, setRoom] = useState<Room | null>(null);
+    const [group, setGroup] = useState<Group | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchScheduleData();
-    }, [courseId]);
+    }, [groupId]);
 
     const fetchScheduleData = async () => {
-        if (!courseId) return;
+        if (!groupId) return;
 
         setLoading(true);
         setError(null);
 
         try {
-            // Fetch lessons
-            const lessonsRes = await fetch(`/api/lessons?roomId=${courseId}`);
+            // Fetch lessons for this group
+            const lessonsRes = await fetch(`/api/lessons?groupId=${groupId}`);
             if (!lessonsRes.ok) {
                 throw new Error('Failed to fetch schedule');
             }
             const lessonsData = await lessonsRes.json();
             setLessons(lessonsData);
 
-            // Fetch room info
-            const roomRes = await fetch(`/api/rooms/${courseId}`);
-            if (roomRes.ok) {
-                const roomData = await roomRes.json();
-                setRoom(roomData);
+            // Fetch group info
+            const groupRes = await fetch(`/api/groups/${groupId}`);
+            if (groupRes.ok) {
+                const groupData = await groupRes.json();
+                setGroup(groupData);
             }
         } catch (err) {
             console.error('Error fetching schedule:', err);
@@ -154,7 +160,7 @@ export default function SchedulePage() {
                     <div className="text-6xl mb-6">📅</div>
                     <h2 className="text-2xl font-bold mb-4">Расписание пусто</h2>
                     <p className="text-white/70 mb-6">
-                        {room ? `Для курса "${room.name}" пока нет занятий` : 'Занятия не найдены'}
+                        {group ? `Для группы "${group.name}" пока нет занятий` : 'Занятия не найдены'}
                     </p>
                     <Link
                         href="/"
@@ -184,15 +190,11 @@ export default function SchedulePage() {
                         </Link>
                     </div>
                     <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent mb-1">
-                        {room?.name || 'Расписание'}
+                        {group?.name || 'Расписание'}
                     </h1>
-                    {room?.location && (
+                    {group?.description && (
                         <p className="text-white/60 text-sm flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                            </svg>
-                            {room.location}
+                            {group.description}
                         </p>
                     )}
                 </div>
@@ -256,12 +258,15 @@ export default function SchedulePage() {
                                                         <span className="font-medium text-white/90">{lesson.teacher}</span>
                                                     </div>
                                                 )}
-                                                {room?.location && (
+                                                {lesson.room && (
                                                     <div className="flex items-center gap-2">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-green-400">
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
                                                         </svg>
-                                                        <span className="font-medium text-white/90">{room.location}</span>
+                                                        <span className="font-medium text-white/90">{lesson.room.name}</span>
+                                                        {lesson.room.location && (
+                                                            <span className="text-white/50 text-xs">• {lesson.room.location}</span>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
