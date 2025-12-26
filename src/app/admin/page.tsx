@@ -60,17 +60,7 @@ export default function AdminPage() {
     const [currentRoomBookings, setCurrentRoomBookings] = useState<Booking[]>([]);
     const [viewingRoomForBookings, setViewingRoomForBookings] = useState<Room | null>(null);
 
-    // Lessons Modal
-    const [lessonsModalOpen, setLessonsModalOpen] = useState(false);
-    const [currentRoomLessons, setCurrentRoomLessons] = useState<Lesson[]>([]);
-    const [viewingRoomForLessons, setViewingRoomForLessons] = useState<Room | null>(null);
-    const [newLesson, setNewLesson] = useState({
-        day: 'monday',
-        timeStart: '09:00',
-        timeEnd: '10:00',
-        subject: '',
-        teacher: ''
-    });
+
 
     // Fetch rooms on mount
     useEffect(() => {
@@ -204,57 +194,7 @@ export default function AdminPage() {
         }
     };
 
-    // --- Lessons Logic ---
-    const fetchRoomLessons = async (room: Room) => {
-        setViewingRoomForLessons(room);
-        setLessonsModalOpen(true);
-        setCurrentRoomLessons([]);
 
-        try {
-            const res = await fetch(`/api/lessons?roomId=${room.id}`);
-            if (res.ok) {
-                const data = await res.json();
-                setCurrentRoomLessons(data);
-            }
-        } catch (e) {
-            console.error("Failed to fetch lessons");
-        }
-    };
-
-    const createLesson = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!viewingRoomForLessons) return;
-
-        try {
-            const res = await fetch('/api/lessons', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    roomId: viewingRoomForLessons.id,
-                    ...newLesson
-                })
-            });
-
-            if (res.ok) {
-                fetchRoomLessons(viewingRoomForLessons);
-                setNewLesson({ ...newLesson, subject: '', teacher: '' });
-            } else {
-                alert('Failed to create lesson');
-            }
-        } catch (e) {
-            alert('Error creating lesson');
-        }
-    };
-
-    const deleteLesson = async (id: string) => {
-        if (!confirm('Delete this lesson?')) return;
-        try {
-            await fetch(`/api/lessons/${id}`, { method: 'DELETE' });
-            if (viewingRoomForLessons) fetchRoomLessons(viewingRoomForLessons);
-        } catch (e) {
-            alert('Error deleting lesson');
-        }
-    };
 
     // --- Helpers ---
     const openQrModal = (room: Room) => {
@@ -377,14 +317,7 @@ export default function AdminPage() {
                                             View
                                         </Link>
                                     </div>
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        <button
-                                            onClick={() => fetchRoomLessons(room)}
-                                            className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 py-1.5 px-3 rounded text-sm transition-colors border border-neutral-700 flex-1 text-center"
-                                        >
-                                            Lessons
-                                        </button>
-                                    </div>
+
                                     <div className="flex flex-wrap gap-2 mt-2">
                                         <button
                                             onClick={() => openEditModal(room)}
@@ -523,119 +456,7 @@ export default function AdminPage() {
                     </div>
                 )}
 
-                {/* Lessons Modal */}
-                {lessonsModalOpen && viewingRoomForLessons && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setLessonsModalOpen(false)}>
-                        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 w-full max-w-4xl shadow-2xl h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-white">Lessons: {viewingRoomForLessons.name}</h3>
-                                <button onClick={() => setLessonsModalOpen(false)} className="text-neutral-400 hover:text-white">✕</button>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
-                                {/* Create Lesson Form */}
-                                <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 h-fit">
-                                    <h4 className="font-semibold mb-4 text-blue-400">Add Recurring Lesson</h4>
-                                    <form onSubmit={createLesson} className="space-y-3">
-                                        <div>
-                                            <label className="text-xs text-neutral-500 block mb-1">Day</label>
-                                            <select
-                                                value={newLesson.day}
-                                                onChange={e => setNewLesson({ ...newLesson, day: e.target.value })}
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white capitalize"
-                                            >
-                                                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="text-xs text-neutral-500 block mb-1">Start</label>
-                                                <input
-                                                    type="time"
-                                                    value={newLesson.timeStart}
-                                                    onChange={e => setNewLesson({ ...newLesson, timeStart: e.target.value })}
-                                                    className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs text-neutral-500 block mb-1">End</label>
-                                                <input
-                                                    type="time"
-                                                    value={newLesson.timeEnd}
-                                                    onChange={e => setNewLesson({ ...newLesson, timeEnd: e.target.value })}
-                                                    className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-neutral-500 block mb-1">Subject</label>
-                                            <input
-                                                type="text"
-                                                value={newLesson.subject}
-                                                onChange={e => setNewLesson({ ...newLesson, subject: e.target.value })}
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
-                                                placeholder="Math 101"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-neutral-500 block mb-1">Teacher</label>
-                                            <input
-                                                type="text"
-                                                value={newLesson.teacher}
-                                                onChange={e => setNewLesson({ ...newLesson, teacher: e.target.value })}
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
-                                                placeholder="Prof. Smith"
-                                            />
-                                        </div>
-                                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded transition-colors">
-                                            Add Lesson
-                                        </button>
-                                    </form>
-                                </div>
-
-                                {/* Lessons List */}
-                                <div className="md:col-span-2 overflow-y-auto pr-2">
-                                    <div className="space-y-4">
-                                        {DAYS.map(day => {
-                                            const dayLessons = currentRoomLessons.filter(l => l.day === day);
-                                            if (dayLessons.length === 0) return null;
-                                            return (
-                                                <div key={day} className="bg-neutral-800/50 rounded-xl p-4 border border-neutral-800">
-                                                    <h5 className="capitalize font-bold text-neutral-400 mb-3 border-b border-neutral-700 pb-2">{day}</h5>
-                                                    <div className="space-y-2">
-                                                        {dayLessons.map(l => (
-                                                            <div key={l.id} className="bg-neutral-900 p-3 rounded-lg flex justify-between items-center border border-neutral-800">
-                                                                <div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="font-mono text-blue-400 font-bold">{l.timeStart} - {l.timeEnd}</span>
-                                                                        <span className="font-semibold text-white">{l.subject}</span>
-                                                                    </div>
-                                                                    <p className="text-sm text-neutral-500">{l.teacher}</p>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => deleteLesson(l.id)}
-                                                                    className="text-red-500 hover:bg-red-500/10 p-2 rounded transition-colors"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                        {currentRoomLessons.length === 0 && (
-                                            <p className="text-neutral-500 text-center py-10">No lessons scheduled.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );
