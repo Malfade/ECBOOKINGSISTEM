@@ -271,6 +271,7 @@ export default function RoomPage() {
                     <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-2 font-semibold">Date</label>
                     <div className="relative">
                         <input
+                            key={date}
                             type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
