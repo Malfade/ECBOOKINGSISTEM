@@ -15,6 +15,7 @@ model Room {
   schedule  Json?
   createdAt DateTime  @default(now()) @map("created_at")
   bookings  Booking[]
+  lessons   Lesson[]
 
   @@map("rooms")
 }
@@ -31,4 +32,18 @@ model Booking {
 
   @@unique([roomId, date, timeStart, timeEnd])
   @@map("bookings")
+}
+
+model Lesson {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  day       String   // "monday", "tuesday", etc.
+  timeStart String   // "09:00" - simplified as string for recurring
+  timeEnd   String   // "10:30"
+  subject   String
+  teacher   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("lessons")
 }

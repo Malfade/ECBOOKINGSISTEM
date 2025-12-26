@@ -13,6 +13,25 @@ interface Room {
     createdAt: string;
 }
 
+interface Lesson {
+    id: string;
+    day: string;
+    timeStart: string;
+    timeEnd: string;
+    subject: string;
+    teacher: string | null;
+}
+
+interface Booking {
+    id: string;
+    roomId: string; // We'll need to join or fetch separately, or filtering
+    date: string;
+    timeStart: string;
+    timeEnd: string;
+    userName: string;
+    createdAt: string;
+}
+
 const DEFAULT_SCHEDULE = {
     monday: { start: '09:00', end: '18:00', active: true },
     tuesday: { start: '09:00', end: '18:00', active: true },
@@ -25,25 +44,10 @@ const DEFAULT_SCHEDULE = {
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-interface Booking {
-    id: string;
-    roomId: string; // We'll need to join or fetch separately, or filtering
-    date: string;
-    timeStart: string;
-    timeEnd: string;
-    userName: string;
-    createdAt: string;
-}
-
 export default function AdminPage() {
     const [rooms, setRooms] = useState<Room[]>([]);
-    const [bookings, setBookings] = useState<Booking[]>([]); // All bookings for simplicity or per room?
-    // Let's fetch bookings per room on demand or fetch all if API supports it.
-    // Our API supports GET /api/bookings?roomId=... 
-    // We might want to add a "View Bookings" button per room.
 
-    // Changing approach: View bookings inside a modal for specific room to keep UI clean.
-
+    // Forms
     const [name, setName] = useState('');
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
@@ -68,6 +72,18 @@ export default function AdminPage() {
     const [currentRoomBookings, setCurrentRoomBookings] = useState<Booking[]>([]);
     const [viewingRoomForBookings, setViewingRoomForBookings] = useState<Room | null>(null);
 
+    // Lessons Modal
+    const [lessonsModalOpen, setLessonsModalOpen] = useState(false);
+    const [currentRoomLessons, setCurrentRoomLessons] = useState<Lesson[]>([]);
+    const [viewingRoomForLessons, setViewingRoomForLessons] = useState<Room | null>(null);
+    const [newLesson, setNewLesson] = useState({
+        day: 'monday',
+        timeStart: '09:00',
+        timeEnd: '10:00',
+        subject: '',
+        teacher: ''
+    });
+
     // Fetch rooms on mount
     useEffect(() => {
         fetchRooms();
@@ -85,19 +101,13 @@ export default function AdminPage() {
         }
     };
 
+    // --- Bookings Logic ---
     const fetchRoomBookings = async (room: Room) => {
         setViewingRoomForBookings(room);
         setBookingsModalOpen(true);
-        setCurrentRoomBookings([]); // Clear prev
+        setCurrentRoomBookings([]);
 
         try {
-            // We need a date to fetch bookings... the API requires date.
-            // Oh, the TZ says GET bookings?roomId=...&date=...
-            // Do we have an endpoint for ALL bookings of a room?
-            // Checking Booking API...
-            // It requires date. We might need to adjust API or just fetch "today".
-            // Let's fetch "today" by default.
-
             const today = new Date().toISOString().split('T')[0];
             const res = await fetch(`/api/bookings?roomId=${room.id}&date=${today}`);
             if (res.ok) {
@@ -109,7 +119,6 @@ export default function AdminPage() {
         }
     };
 
-    // Allow date changing in modal
     const fetchBookingsByDate = async (roomId: string, date: string) => {
         try {
             const res = await fetch(`/api/bookings?roomId=${roomId}&date=${date}`);
@@ -122,7 +131,20 @@ export default function AdminPage() {
         }
     }
 
+    const deleteBooking = async (id: string, roomId: string) => {
+        if (!confirm("Delete this booking?")) return;
+        try {
+            const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                const date = (document.querySelector('input[type="date"]') as HTMLInputElement)?.value;
+                if (date) fetchBookingsByDate(roomId, date);
+            }
+        } catch (e) {
+            alert('Error deleting booking');
+        }
+    };
 
+    // --- Rooms Logic ---
     const createRoom = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
@@ -135,9 +157,7 @@ export default function AdminPage() {
                 body: JSON.stringify({ name, location, description, schedule }),
             });
 
-            if (!res.ok) {
-                throw new Error('Failed to create room');
-            }
+            if (!res.ok) throw new Error('Failed to create room');
 
             await fetchRooms();
             setName('');
@@ -151,23 +171,8 @@ export default function AdminPage() {
         }
     };
 
-    const deleteBooking = async (id: string, roomId: string) => {
-        if (!confirm("Delete this booking?")) return;
-        try {
-            const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                // refresh
-                const date = (document.querySelector('input[type="date"]') as HTMLInputElement)?.value;
-                if (date) fetchBookingsByDate(roomId, date);
-            }
-        } catch (e) {
-            alert('Error deleting booking');
-        }
-    };
-
     const deleteRoom = async (id: string) => {
         if (!confirm('Are you sure you want to delete this room?')) return;
-
         try {
             await fetch(`/api/rooms/${id}`, { method: 'DELETE' });
             fetchRooms();
@@ -213,6 +218,59 @@ export default function AdminPage() {
         }
     };
 
+    // --- Lessons Logic ---
+    const fetchRoomLessons = async (room: Room) => {
+        setViewingRoomForLessons(room);
+        setLessonsModalOpen(true);
+        setCurrentRoomLessons([]);
+
+        try {
+            const res = await fetch(`/api/lessons?roomId=${room.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentRoomLessons(data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch lessons");
+        }
+    };
+
+    const createLesson = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!viewingRoomForLessons) return;
+
+        try {
+            const res = await fetch('/api/lessons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    roomId: viewingRoomForLessons.id,
+                    ...newLesson
+                })
+            });
+
+            if (res.ok) {
+                fetchRoomLessons(viewingRoomForLessons);
+                setNewLesson({ ...newLesson, subject: '', teacher: '' });
+            } else {
+                alert('Failed to create lesson');
+            }
+        } catch (e) {
+            alert('Error creating lesson');
+        }
+    };
+
+    const deleteLesson = async (id: string) => {
+        if (!confirm('Delete this lesson?')) return;
+        try {
+            await fetch(`/api/lessons/${id}`, { method: 'DELETE' });
+            if (viewingRoomForLessons) fetchRoomLessons(viewingRoomForLessons);
+        } catch (e) {
+            alert('Error deleting lesson');
+        }
+    };
+
+    // --- Helpers ---
     const openQrModal = (room: Room) => {
         setQrRoom(room);
         setQrModalOpen(true);
@@ -227,11 +285,7 @@ export default function AdminPage() {
 
     const formatTime = (isoString: string) => {
         if (!isoString) return '';
-        // Extract HH:mm from 1970-01-01THH:mm:ss.000Z
-        // If string is 2023-.... it will also take HH:mm if after T
-        // Robust way: create Date object
         const date = new Date(isoString);
-        // We stored as UTC.
         const h = date.getUTCHours().toString().padStart(2, '0');
         const m = date.getUTCMinutes().toString().padStart(2, '0');
         return `${h}:${m}`;
@@ -276,8 +330,6 @@ export default function AdminPage() {
                                     onChange={(e) => setDescription(e.target.value)}
                                     className="bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-full text-white placeholder-neutral-500 h-20 resize-none"
                                 />
-                                {/* Schedule for New Room - Basic toggle or full? Let's hide complexity for MVP or add simple checkbox? 
-                                    User asked for ability to add schedule. Let's add the same editor here. */}
                                 <div className="space-y-2 max-h-40 overflow-y-auto pr-2 border border-neutral-800 rounded-lg p-2">
                                     <label className="text-sm text-neutral-400 block mb-2">Schedule</label>
                                     {DAYS.map(day => (
@@ -374,6 +426,14 @@ export default function AdminPage() {
                                         >
                                             View
                                         </Link>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        <button
+                                            onClick={() => fetchRoomLessons(room)}
+                                            className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 py-1.5 px-3 rounded text-sm transition-colors border border-neutral-700 flex-1 text-center"
+                                        >
+                                            Lessons
+                                        </button>
                                     </div>
                                     <div className="flex flex-wrap gap-2 mt-2">
                                         <button
@@ -561,7 +621,120 @@ export default function AdminPage() {
                     </div>
                 )}
 
+                {/* Lessons Modal */}
+                {lessonsModalOpen && viewingRoomForLessons && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setLessonsModalOpen(false)}>
+                        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 w-full max-w-4xl shadow-2xl h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-white">Lessons: {viewingRoomForLessons.name}</h3>
+                                <button onClick={() => setLessonsModalOpen(false)} className="text-neutral-400 hover:text-white">✕</button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full overflow-hidden">
+                                {/* Create Lesson Form */}
+                                <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800 h-fit">
+                                    <h4 className="font-semibold mb-4 text-blue-400">Add Recurring Lesson</h4>
+                                    <form onSubmit={createLesson} className="space-y-3">
+                                        <div>
+                                            <label className="text-xs text-neutral-500 block mb-1">Day</label>
+                                            <select
+                                                value={newLesson.day}
+                                                onChange={e => setNewLesson({ ...newLesson, day: e.target.value })}
+                                                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white capitalize"
+                                            >
+                                                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-xs text-neutral-500 block mb-1">Start</label>
+                                                <input
+                                                    type="time"
+                                                    value={newLesson.timeStart}
+                                                    onChange={e => setNewLesson({ ...newLesson, timeStart: e.target.value })}
+                                                    className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-neutral-500 block mb-1">End</label>
+                                                <input
+                                                    type="time"
+                                                    value={newLesson.timeEnd}
+                                                    onChange={e => setNewLesson({ ...newLesson, timeEnd: e.target.value })}
+                                                    className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500 block mb-1">Subject</label>
+                                            <input
+                                                type="text"
+                                                value={newLesson.subject}
+                                                onChange={e => setNewLesson({ ...newLesson, subject: e.target.value })}
+                                                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
+                                                placeholder="Math 101"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500 block mb-1">Teacher</label>
+                                            <input
+                                                type="text"
+                                                value={newLesson.teacher}
+                                                onChange={e => setNewLesson({ ...newLesson, teacher: e.target.value })}
+                                                className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
+                                                placeholder="Prof. Smith"
+                                            />
+                                        </div>
+                                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded transition-colors">
+                                            Add Lesson
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {/* Lessons List */}
+                                <div className="md:col-span-2 overflow-y-auto pr-2">
+                                    <div className="space-y-4">
+                                        {DAYS.map(day => {
+                                            const dayLessons = currentRoomLessons.filter(l => l.day === day);
+                                            if (dayLessons.length === 0) return null;
+                                            return (
+                                                <div key={day} className="bg-neutral-800/50 rounded-xl p-4 border border-neutral-800">
+                                                    <h5 className="capitalize font-bold text-neutral-400 mb-3 border-b border-neutral-700 pb-2">{day}</h5>
+                                                    <div className="space-y-2">
+                                                        {dayLessons.map(l => (
+                                                            <div key={l.id} className="bg-neutral-900 p-3 rounded-lg flex justify-between items-center border border-neutral-800">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-mono text-blue-400 font-bold">{l.timeStart} - {l.timeEnd}</span>
+                                                                        <span className="font-semibold text-white">{l.subject}</span>
+                                                                    </div>
+                                                                    <p className="text-sm text-neutral-500">{l.teacher}</p>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => deleteLesson(l.id)}
+                                                                    className="text-red-500 hover:bg-red-500/10 p-2 rounded transition-colors"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                        {currentRoomLessons.length === 0 && (
+                                            <p className="text-neutral-500 text-center py-10">No lessons scheduled.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div >
+        </div>
     );
 }

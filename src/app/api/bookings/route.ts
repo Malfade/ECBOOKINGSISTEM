@@ -121,6 +121,31 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Slot is already booked' }, { status: 409 });
         }
 
+        // 4. Check Lesson Conflict (Priority)
+        // Fetch lessons for this room and day of week
+        const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const lessons = await prisma.lesson.findMany({
+            where: {
+                roomId,
+                day: dayOfWeek
+            }
+        });
+
+        const hasLessonConflict = lessons.some((l: any) => {
+            // Lesson times are strings "HH:MM"
+            // Convert to Epoch for comparison
+            const lStart = new Date(`1970-01-01T${l.timeStart}:00Z`).getTime();
+            const lEnd = new Date(`1970-01-01T${l.timeEnd}:00Z`).getTime();
+            const newStart = startEpoch.getTime();
+            const newEnd = endEpoch.getTime();
+
+            return lStart < newEnd && lEnd > newStart;
+        });
+
+        if (hasLessonConflict) {
+            return NextResponse.json({ error: 'Room is occupied by a scheduled class' }, { status: 409 });
+        }
+
         // Create Booking
         const newBooking = await prisma.booking.create({
             data: {

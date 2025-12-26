@@ -17,6 +17,15 @@ interface Room {
     schedule: any;
 }
 
+interface Lesson {
+    id: string;
+    day: string;
+    timeStart: string;
+    timeEnd: string;
+    subject: string;
+    teacher: string | null;
+}
+
 const TIME_SLOTS = [
     '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00'
@@ -29,6 +38,7 @@ export default function RoomPage() {
     const [room, setRoom] = useState<Room | null>(null);
     const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [bookings, setBookings] = useState<Booking[]>([]);
+    const [lessons, setLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Multi-select state
@@ -39,7 +49,10 @@ export default function RoomPage() {
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        if (roomId) fetchRoom();
+        if (roomId) {
+            fetchRoom();
+            fetchLessons();
+        }
     }, [roomId]);
 
     useEffect(() => {
@@ -59,6 +72,26 @@ export default function RoomPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchLessons = async () => {
+        try {
+            const res = await fetch(`/api/lessons?roomId=${roomId}`);
+            if (res.ok) setLessons(await res.json());
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const getLessonForSlot = (slot: string) => {
+        const dateObj = new Date(date);
+        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+        return lessons.find(l => {
+            if (l.day !== dayName) return false;
+            // Simple string compare works for fixed format HH:mm
+            return slot >= l.timeStart && slot < l.timeEnd;
+        });
     };
 
     const fetchBookings = async () => {
@@ -98,6 +131,7 @@ export default function RoomPage() {
 
     const handleSlotClick = (slot: string) => {
         if (isSlotOccupied(slot)) return;
+        if (getLessonForSlot(slot)) return;
         if (!isSlotAvailableInSchedule(slot)) return;
 
         // Check past
@@ -263,9 +297,10 @@ export default function RoomPage() {
 
                             const isSelected = selectedSlots.includes(slot);
                             const isScheduled = isSlotAvailableInSchedule(slot);
+                            const lesson = getLessonForSlot(slot);
 
-                            // Disable if scheduled closed
-                            if (!isScheduled) disabled = true;
+                            // Disable if scheduled closed or has lesson
+                            if (!isScheduled || lesson) disabled = true;
 
                             return (
                                 <button
@@ -286,6 +321,8 @@ export default function RoomPage() {
                                     {occupied && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500/50"></span>}
                                     {!occupied && !disabled && !isSelected && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500/50"></span>}
                                     {!isScheduled && !occupied && <span className="absolute top-2 right-2 text-[10px] text-neutral-700">CLOSED</span>}
+                                    {lesson && <span className="absolute top-2 right-2 text-[10px] text-blue-500 font-bold uppercase tracking-wider">CLASS</span>}
+                                    {lesson && <span className="absolute bottom-2 left-4 text-[10px] text-neutral-400 truncate w-20">{lesson.subject}</span>}
                                 </button>
                             );
                         })}
