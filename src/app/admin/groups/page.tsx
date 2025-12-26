@@ -137,6 +137,11 @@ export default function GroupsPage() {
         setLessonsModalOpen(true);
         setGroupLessons([]);
 
+        // Initialize with first room if available
+        if (rooms.length > 0 && newLesson.roomId === '') {
+            setNewLesson({ ...newLesson, roomId: rooms[0].id });
+        }
+
         try {
             const res = await fetch(`/api/lessons?groupId=${group.id}`);
             if (res.ok) {
@@ -366,7 +371,6 @@ export default function GroupsPage() {
                                                 className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-white"
                                                 required
                                             >
-                                                <option value="">Выберите кабинет</option>
                                                 {rooms.map(r => (
                                                     <option key={r.id} value={r.id}>
                                                         {r.name} {r.location && `(${r.location})`}
