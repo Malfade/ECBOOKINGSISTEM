@@ -240,9 +240,15 @@ export default function RoomPage() {
     if (loading) return <div className="flex h-screen items-center justify-center text-neutral-400">Loading...</div>;
     if (!room) return <div className="flex h-screen items-center justify-center text-neutral-400">Room not found</div>;
 
+
     const slotString = selectedSlots.length > 0
         ? `${selectedSlots[0]} - ${parseInt(selectedSlots[selectedSlots.length - 1].split(':')[0]) + 1}:00`
         : '';
+
+    // Safe date parsing for display to avoid timezone shifts
+    const [y, m, d] = date.split('-').map(Number);
+    const displayDate = new Date(y, m - 1, d);
+    const dayLabel = displayDate.toLocaleDateString('en-US', { weekday: 'long' });
 
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-blue-500/30">
@@ -270,7 +276,12 @@ export default function RoomPage() {
             <main className="p-6 max-w-lg mx-auto pb-32">
                 {/* Date Selection */}
                 <div className="mb-8">
-                    <label className="block text-xs uppercase tracking-wider text-neutral-500 mb-2 font-semibold">Date</label>
+                    <div className="flex justify-between items-baseline mb-2">
+                        <label className="text-xs uppercase tracking-wider text-neutral-500 font-semibold">Date</label>
+                        <span className="text-sm font-medium text-blue-400 capitalize">
+                            {dayLabel}
+                        </span>
+                    </div>
                     <div className="relative">
                         <input
                             key={date}
