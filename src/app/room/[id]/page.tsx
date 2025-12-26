@@ -119,23 +119,11 @@ export default function RoomPage() {
     // Helper to get slot index
     const getSlotIndex = (slot: string) => TIME_SLOTS.indexOf(slot);
 
-    // Schedule Check
+    // Schedule Check (deprecated - rooms no longer have schedule field)
+    // Availability is now determined by lessons only
     const isSlotAvailableInSchedule = (slot: string) => {
-        if (!room || !room.schedule) return true; // Default open if no schedule
-
-        const dateObj = new Date(date);
-        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const daySchedule = room.schedule[dayName];
-
-        if (!daySchedule || !daySchedule.active) return false;
-
-        // Calculate slot end time (slot + 1 hour)
-        const [slotHour, slotMin] = slot.split(':').map(Number);
-        const slotEndHour = slotHour + 1;
-        const slotEnd = `${slotEndHour.toString().padStart(2, '0')}:${slotMin.toString().padStart(2, '0')}`;
-
-        // Check if slot fits within schedule (start >= schedule.start AND end <= schedule.end)
-        return slot >= daySchedule.start && slotEnd <= daySchedule.end;
+        // Always return true - availability controlled by lessons
+        return true;
     };
 
     const handleSlotClick = (slot: string) => {
